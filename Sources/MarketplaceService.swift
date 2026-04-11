@@ -17,7 +17,6 @@ actor MarketplaceService {
                 installs: skill.installs,
                 stars: nil,
                 author: skill.source.components(separatedBy: "/").first,
-                authorAvatar: nil,
                 githubUrl: "https://github.com/\(skill.source)",
                 marketplace: .skillsSh
             )

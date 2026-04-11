@@ -110,13 +110,13 @@ struct AddSkillSheet: View {
         isInstalling = true
         errorMessage = nil
         Task {
-            await manager.addSkill(from: sourceText)
-            isInstalling = false
-            if manager.errorMessage == nil {
+            do {
+                try await manager.addSkill(from: sourceText)
                 dismiss()
-            } else {
-                errorMessage = manager.errorMessage
+            } catch {
+                errorMessage = error.localizedDescription
             }
+            isInstalling = false
         }
     }
 }

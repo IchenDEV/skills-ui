@@ -5,7 +5,6 @@ struct SkillsSidebar: View {
     @Binding var selectedSkill: Skill?
     @Binding var searchText: String
     @State private var showAddSheet = false
-    @State private var expandedSources: Set<String> = []
 
     private var filteredSkills: [Skill] {
         if searchText.isEmpty { return manager.skills }
@@ -76,8 +75,8 @@ struct SkillRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Image(systemName: skillIcon)
-                    .foregroundStyle(skillColor)
+                Image(systemName: skill.skillIcon)
+                    .foregroundStyle(skill.skillColor)
                     .font(.system(size: 14, weight: .medium))
                     .frame(width: 20)
 
@@ -93,33 +92,4 @@ struct SkillRow: View {
         .padding(.vertical, 2)
     }
 
-    private var skillIcon: String {
-        if skill.name.hasPrefix("ljg-") { return "character.book.closed.fill" }
-        if skill.name.contains("react") { return "atom" }
-        if skill.name.contains("design") { return "paintbrush.fill" }
-        if skill.name.contains("find") { return "magnifyingglass" }
-        if skill.name.contains("browser") { return "globe" }
-        if skill.name.contains("paper") { return "doc.text.fill" }
-        if skill.name.contains("dogfood") { return "ladybug.fill" }
-        if skill.name.contains("sandbox") { return "shippingbox.fill" }
-        if skill.name.contains("a2a") { return "arrow.left.arrow.right" }
-        if skill.name.contains("invest") { return "chart.line.uptrend.xyaxis" }
-        if skill.name.contains("rank") { return "list.number" }
-        if skill.name.contains("relationship") { return "person.2.fill" }
-        if skill.name.contains("roundtable") { return "person.3.fill" }
-        if skill.name.contains("plain") { return "textformat" }
-        return "puzzlepiece.extension.fill"
-    }
-
-    private var skillColor: Color {
-        if skill.name.hasPrefix("ljg-") { return .orange }
-        if skill.name.contains("react") { return .cyan }
-        if skill.name.contains("design") { return .pink }
-        if skill.name.contains("find") { return .blue }
-        if skill.name.contains("browser") { return .green }
-        if skill.name.contains("vercel") { return .purple }
-        if skill.name.contains("dogfood") { return .red }
-        if skill.name.contains("a2a") { return .indigo }
-        return .secondary
-    }
 }
