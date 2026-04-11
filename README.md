@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://developer.apple.com/assets/elements/icons/swiftui/swiftui-96x96_2x.png" width="80" alt="SkillsUI Icon" />
+  <img src="assets/icon.svg" width="80" alt="SkillsUI Icon" />
 </p>
 
 <h1 align="center">SkillsUI</h1>
@@ -17,7 +17,6 @@
 
 <p align="center">
   <a href="#features">Features</a> •
-  <a href="#screenshots">Screenshots</a> •
   <a href="#getting-started">Getting Started</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#supported-agents">Supported Agents</a> •
@@ -36,10 +35,8 @@
 | 📂 | **Quick Actions** | Reveal in Finder, open on GitHub, view raw source, or remove skills instantly |
 | 🔗 | **Symlink Aware** | Detects and displays whether skills are symlinks or copies |
 | 🏷️ | **Smart Grouping** | Auto-groups skills by source repository with contextual icons |
-
-## Screenshots
-
-> _Build and run the app to see the full UI — a `NavigationSplitView` with sidebar + detail, plus a Marketplace tab._
+| 🛠️ | **Guided Setup** | Detects Node.js and skills CLI on launch; walks you through installation if anything is missing |
+| ⚙️ | **Settings & Versioning** | Settings window (⌘,) shows runtime versions, checks for skills CLI updates, and offers one-click upgrade |
 
 ## Getting Started
 
@@ -47,7 +44,9 @@
 
 - **macOS 26** (Tahoe) or later
 - **Swift 6.2+** toolchain (ships with Xcode 26+)
-- [`npx skills`](https://skills.sh) CLI installed globally (`npm i -g skills`)
+- **Node.js** — SkillsUI will guide you through installation on first launch if it's missing
+
+> **Tip:** You don't need to install the skills CLI manually. SkillsUI detects whether it's present and offers installation guidance in the onboarding sheet and in **Settings → Environment**.
 
 ### Build & Run
 
@@ -61,8 +60,6 @@ swift build
 
 # Run
 swift run SkillsUI
-# — or —
-open .build/debug/SkillsUI
 ```
 
 ### Build for Release
@@ -72,22 +69,38 @@ swift build -c release
 cp .build/release/SkillsUI /usr/local/bin/
 ```
 
+> **Note:** Binaries built locally are unsigned. If macOS blocks the app, run `xattr -cr SkillsUI` once to clear the quarantine flag.
+
+### Download a Pre-built Binary
+
+Pre-built binaries (arm64) are attached to every [GitHub Release](https://github.com/IchenDEV/skills-ui/releases). Each release includes a `.sha256` checksum file for verification.
+
+```bash
+# Verify checksum after download
+shasum -a 256 -c SkillsUI-*.tar.gz.sha256
+```
+
 ## Architecture
 
 ```
 Sources/
-├── SkillsUIApp.swift          # @main entry, window config, app icon
-├── ContentView.swift           # TabView (Installed / Marketplace)
-├── SkillsSidebar.swift         # Sidebar list, grouped by source
+├── SkillsUIApp.swift          # @main entry, window config, app icon, Settings scene
+├── ContentView.swift           # TabView (Installed / Marketplace) + onboarding trigger
+├── SkillsSidebar.swift         # Sidebar list, grouped by source, version footer
 ├── SkillDetailView.swift       # Detail pane — metadata grid + SKILL.md
 ├── AddSkillSheet.swift         # Sheet for adding skills from GitHub
 ├── MarketplaceView.swift       # Marketplace search UI
 ├── MarketplaceService.swift    # skills.sh API client (actor)
 ├── MarketplaceSkill.swift      # Marketplace data model
-├── SkillsManager.swift         # Core state — scanning, install, remove
+├── SkillsManager.swift         # Core state — scanning, install, remove, env check
 ├── Skill.swift                 # Installed skill model
+├── Skill+UI.swift              # SwiftUI extension: skillColor
 ├── SkillParser.swift           # SKILL.md YAML frontmatter parser
-└── SkillLock.swift             # .skill-lock.json Codable types
+├── SkillLock.swift             # .skill-lock.json Codable types
+├── DependencyChecker.swift     # DependencyStatus model + EnvironmentChecker
+├── OnboardingView.swift        # Setup sheet shown when Node/skills CLI is missing
+├── SettingsView.swift          # Settings window (About + Environment tabs)
+└── AppVersion.swift            # Version string — overwritten by CI on release builds
 ```
 
 ### Key Design Decisions
@@ -95,11 +108,9 @@ Sources/
 - **SwiftPM executable** — no Xcode project required; builds with `swift build`
 - **`@Observable` + actors** — Swift 6 strict concurrency throughout
 - **No third-party UI deps** — pure SwiftUI with native macOS look & feel
-- **`swift-markdown`** — only dependency, used for Markdown rendering
+- **Version baked at build time** — CI overwrites `AppVersion.swift` with the Release tag before `swift build -c release`
 
 ## Supported Agents
-
-SkillsUI can install and detect skills for the following AI coding agents:
 
 | Agent | Skills Path |
 |---|---|
@@ -143,12 +154,23 @@ SkillsUI can install and detect skills for the following AI coding agents:
 └──────────────┘
 ```
 
+## Releasing a New Version
+
+Push a tag matching `v*` and the CI workflow builds the binary and attaches it to the GitHub Release automatically:
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The workflow injects the tag version into `AppVersion.swift` before building, so **Settings → About** always shows the correct release version.
+
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/awesome`)
 3. Commit your changes (`git commit -m 'Add awesome feature'`)
-4. Push to the branch (`git push origin feature/awesome`)
+4. Push the branch (`git push origin feature/awesome`)
 5. Open a Pull Request
 
 ## License
