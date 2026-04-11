@@ -12,6 +12,7 @@ final class SkillsManager {
     var skills: [Skill] = []
     var isLoading = false
     var errorMessage: String?
+    var dependencyStatus: DependencyStatus?
 
     private let homePath: String
     private let globalSkillsPath: String
@@ -161,6 +162,26 @@ final class SkillsManager {
             }
         }.value
         await loadSkills()
+    }
+
+    func checkEnvironment() async {
+        dependencyStatus = await EnvironmentChecker.check()
+    }
+
+    func updateSkillsCLI() async {
+        do {
+            try await Task.detached {
+                let process = EnvironmentChecker.makeProcess(args: ["npm", "update", "-g", "skills"])
+                try process.run()
+                process.waitUntilExit()
+                if process.terminationStatus != 0 {
+                    throw CommandError(exitCode: process.terminationStatus)
+                }
+            }.value
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        await checkEnvironment()
     }
 
     func revealInFinder(_ skill: Skill) {

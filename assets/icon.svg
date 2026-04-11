@@ -1,0 +1,37 @@
+<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#5959F2"/>
+      <stop offset="100%" stop-color="#5959F2" stop-opacity="0.72"/>
+    </linearGradient>
+    <clipPath id="card">
+      <rect x="2" y="2" width="76" height="76" rx="17" ry="17"/>
+    </clipPath>
+  </defs>
+
+  <!-- White card background with subtle shadow -->
+  <rect x="2" y="2" width="76" height="76" rx="17" ry="17"
+        fill="white" opacity="1"
+        style="filter:drop-shadow(0 3px 8px rgba(0,0,0,0.18))"/>
+
+  <!-- Gradient fill clipped to card shape -->
+  <rect x="2" y="2" width="76" height="76" rx="17" ry="17"
+        fill="url(#grad)" clip-path="url(#card)"/>
+
+  <!-- Puzzle piece (puzzlepiece.extension approximation), white, centered -->
+  <!-- Left piece body -->
+  <rect x="16" y="28" width="19" height="24" rx="3" fill="white"/>
+  <!-- Left piece top tab -->
+  <ellipse cx="25.5" cy="26" rx="5" ry="4.5" fill="white"/>
+  <!-- Left piece right notch (removed, overlap with right) -->
+
+  <!-- Right piece body -->
+  <rect x="35" y="28" width="29" height="24" rx="3" fill="white"/>
+  <!-- Right piece top tab -->
+  <ellipse cx="49.5" cy="26" rx="5" ry="4.5" fill="white"/>
+  <!-- Right piece bottom tab -->
+  <ellipse cx="49.5" cy="54" rx="5" ry="4.5" fill="white"/>
+
+  <!-- Cover the join between pieces -->
+  <rect x="34" y="28" width="3" height="24" fill="url(#grad)"/>
+</svg>

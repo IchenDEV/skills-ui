@@ -29,8 +29,7 @@ struct SkillsSidebar: View {
                     }
                 } header: {
                     Label {
-                        Text(group.source)
-                            .fontWeight(.semibold)
+                        Text(group.source).fontWeight(.semibold)
                     } icon: {
                         Image(systemName: group.source.contains("/") ? "shippingbox" : "folder")
                     }
@@ -40,23 +39,26 @@ struct SkillsSidebar: View {
         .listStyle(.sidebar)
         .overlay {
             if manager.isLoading {
-                ProgressView()
-                    .controlSize(.large)
+                ProgressView().controlSize(.large)
             } else if manager.skills.isEmpty {
-                ContentUnavailableView("No Skills Installed", systemImage: "puzzlepiece.extension", description: Text("Add skills from a GitHub repository."))
+                ContentUnavailableView(
+                    "No Skills Installed",
+                    systemImage: "puzzlepiece.extension",
+                    description: Text("Add skills from a GitHub repository.")
+                )
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if let status = manager.dependencyStatus {
+                VersionFooter(status: status)
             }
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    showAddSheet = true
-                } label: {
+                Button { showAddSheet = true } label: {
                     Label("Add Skill", systemImage: "plus")
                 }
-
-                Button {
-                    Task { await manager.loadSkills() }
-                } label: {
+                Button { Task { await manager.loadSkills() } } label: {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
             }
@@ -69,6 +71,49 @@ struct SkillsSidebar: View {
     }
 }
 
+// MARK: - Version Footer
+
+private struct VersionFooter: View {
+    let status: DependencyStatus
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let version = status.currentSkillsVersion {
+                Label("skills v\(version)", systemImage: "shippingbox")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            } else {
+                Label("skills CLI not found", systemImage: "exclamationmark.triangle")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
+
+            Spacer()
+
+            if status.hasUpdate, let latest = status.latestSkillsVersion {
+                Button {
+                    // Open the Settings window (Environment tab)
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.up.circle.fill")
+                        Text("v\(latest)")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                }
+                .buttonStyle(.borderless)
+                .help("Update skills to v\(latest) — open Settings")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+}
+
+// MARK: - SkillRow
+
 struct SkillRow: View {
     let skill: Skill
 
@@ -79,7 +124,6 @@ struct SkillRow: View {
                     .foregroundStyle(skill.skillColor)
                     .font(.system(size: 14, weight: .medium))
                     .frame(width: 20)
-
                 Text(skill.displayName)
                     .font(.headline)
                     .lineLimit(1)
@@ -91,5 +135,4 @@ struct SkillRow: View {
         }
         .padding(.vertical, 2)
     }
-
 }
