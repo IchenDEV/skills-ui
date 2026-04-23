@@ -39,7 +39,7 @@ jobs:
         run: swift build -c release
 
   release:
-    name: Create Release Artifact
+    name: Create DMG Artifact
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: macos-26
@@ -53,12 +53,18 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Build release binary
-        run: swift build -c release
+      - name: Package DMG
+        env:
+          BUILD: ${{ github.run_number }}
+        run: |
+          APP_BUILD="${BUILD}" ./scripts/package-dmg.sh
+          shasum -a 256 dist/SkillsUI.dmg > dist/SkillsUI.dmg.sha256
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: SkillsUI-macos
-          path: .build/release/SkillsUI
+          name: SkillsUI-dmg
+          path: |
+            dist/SkillsUI.dmg
+            dist/SkillsUI.dmg.sha256
           if-no-files-found: error
