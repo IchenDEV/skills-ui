@@ -1,22 +1,23 @@
 <p align="center">
-  <img src="assets/icon.svg" width="80" alt="SkillsUI Icon" />
+  <img src="assets/logo.svg" width="420" alt="SkillsUI logo" />
 </p>
 
-<h1 align="center">SkillsUI</h1>
+<p align="center">
+  <strong>A native macOS app for managing AI agent skills without living in dotfiles and symlinks.</strong>
+</p>
 
 <p align="center">
-  <strong>A native macOS app to manage AI agent skills — browse, install, and organize <a href="https://skills.sh">skills.sh</a> packages across all your coding agents.</strong>
+  Browse installed skills, search <a href="https://skills.sh">skills.sh</a>, inspect rendered <code>SKILL.md</code>, and send the same package to Codex, Claude Code, Cursor, Windsurf, and the rest of your local agent setup.
 </p>
 
 <p align="center">
   <a href="https://developer.apple.com/swift/"><img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6" /></a>
   <a href="https://developer.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-26+-000?logo=apple&logoColor=white" alt="macOS 26+" /></a>
   <a href="https://developer.apple.com/xcode/swiftui/"><img src="https://img.shields.io/badge/SwiftUI-Framework-007AFF?logo=swift&logoColor=white" alt="SwiftUI" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="License" /></a>
 </p>
 
 <p align="center">
-  <a href="#features">Features</a> •
+  <a href="#what-it-does">What It Does</a> •
   <a href="#getting-started">Getting Started</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#supported-agents">Supported Agents</a> •
@@ -25,18 +26,14 @@
 
 ---
 
-## Features
+## What It Does
 
-| | Feature | Description |
-|---|---|---|
-| 🧩 | **Skill Browser** | View all globally installed skills with rich metadata, source info, and rendered SKILL.md content |
-| 🔍 | **Marketplace Search** | Search [skills.sh](https://skills.sh) directly from the app and install with one click |
-| 🤖 | **Multi-Agent Support** | Install skills to 20+ agents — Claude Code, Cursor, Codex, Windsurf, Gemini CLI, and more |
-| 📂 | **Quick Actions** | Reveal in Finder, open on GitHub, view raw source, or remove skills instantly |
-| 🔗 | **Symlink Aware** | Detects and displays whether skills are symlinks or copies |
-| 🏷️ | **Smart Grouping** | Auto-groups skills by source repository with contextual icons |
-| 🛠️ | **Guided Setup** | Detects Node.js and skills CLI on launch; walks you through installation if anything is missing |
-| ⚙️ | **Settings & Versioning** | Settings window (⌘,) shows runtime versions, checks for skills CLI updates, and offers one-click upgrade |
+- Shows every installed skill from the shared `~/.agents/skills` store, grouped by source repo.
+- Renders `SKILL.md` content so you can inspect a package before wiring it into another agent.
+- Searches the [skills.sh](https://skills.sh) marketplace inside the app and installs packages with one click.
+- Detects per-agent links across 20 supported agent directories, so you can see where each skill is actually available.
+- Gives you the day-to-day actions you need: reveal in Finder, open the source, remove a skill, or refresh the index.
+- Checks Node.js and the `skills` CLI on launch, then points you to the missing piece when your environment is incomplete.
 
 ## Getting Started
 
@@ -47,6 +44,8 @@
 - **Node.js** — SkillsUI will guide you through installation on first launch if it's missing
 
 > **Tip:** You don't need to install the skills CLI manually. SkillsUI detects whether it's present and offers installation guidance in the onboarding sheet and in **Settings → Environment**.
+>
+> **Why Node at all?** The app itself is native SwiftUI, but install/remove/update operations call `npx skills` under the hood, so Node.js is a runtime dependency for those actions rather than for building the macOS app.
 
 ### Build & Run
 
@@ -172,13 +171,3 @@ The workflow injects the tag version into `AppVersion.swift` before building, so
 3. Commit your changes (`git commit -m 'Add awesome feature'`)
 4. Push the branch (`git push origin feature/awesome`)
 5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
----
-
-<p align="center">
-  Built with ❤️ and SwiftUI
-</p>

@@ -1,37 +1,39 @@
-<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%"   stop-color="#5959F2"/>
-      <stop offset="100%" stop-color="#5959F2" stop-opacity="0.72"/>
+    <filter id="plate-shadow" x="0" y="2" width="96" height="96" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feOffset dy="6"/>
+      <feGaussianBlur stdDeviation="4"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0588 0 0 0 0 0.102 0 0 0 0 0.149 0 0 0 0.18 0"/>
+    </filter>
+    <linearGradient id="plate-fill" x1="16" y1="14" x2="80" y2="82" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF9EE"/>
+      <stop offset="1" stop-color="#EEF7FA"/>
     </linearGradient>
-    <clipPath id="card">
-      <rect x="2" y="2" width="76" height="76" rx="17" ry="17"/>
-    </clipPath>
   </defs>
 
-  <!-- White card background with subtle shadow -->
-  <rect x="2" y="2" width="76" height="76" rx="17" ry="17"
-        fill="white" opacity="1"
-        style="filter:drop-shadow(0 3px 8px rgba(0,0,0,0.18))"/>
+  <g filter="url(#plate-shadow)">
+    <rect x="8" y="6" width="80" height="80" rx="22" fill="url(#plate-fill)"/>
+    <rect x="8.75" y="6.75" width="78.5" height="78.5" rx="21.25" stroke="#D7E3EA" stroke-width="1.5"/>
+  </g>
 
-  <!-- Gradient fill clipped to card shape -->
-  <rect x="2" y="2" width="76" height="76" rx="17" ry="17"
-        fill="url(#grad)" clip-path="url(#card)"/>
+  <rect x="20" y="21" width="40" height="22" rx="8" fill="#DFF5EA"/>
+  <rect x="20.5" y="21.5" width="39" height="21" rx="7.5" stroke="#C6E7DB"/>
+  <rect x="27" y="28" width="7" height="8" rx="3.5" fill="#1F9D76"/>
+  <rect x="38" y="29" width="14" height="3.5" rx="1.75" fill="#173042" fill-opacity="0.22"/>
+  <rect x="38" y="34.5" width="10" height="3.5" rx="1.75" fill="#173042" fill-opacity="0.14"/>
 
-  <!-- Puzzle piece (puzzlepiece.extension approximation), white, centered -->
-  <!-- Left piece body -->
-  <rect x="16" y="28" width="19" height="24" rx="3" fill="white"/>
-  <!-- Left piece top tab -->
-  <ellipse cx="25.5" cy="26" rx="5" ry="4.5" fill="white"/>
-  <!-- Left piece right notch (removed, overlap with right) -->
+  <rect x="28" y="37" width="44" height="22" rx="8" fill="#DDEBFF"/>
+  <rect x="28.5" y="37.5" width="43" height="21" rx="7.5" stroke="#C7D9F5"/>
+  <rect x="35" y="44" width="7" height="8" rx="3.5" fill="#3B82F6"/>
+  <rect x="46" y="45" width="16" height="3.5" rx="1.75" fill="#173042" fill-opacity="0.22"/>
+  <rect x="46" y="50.5" width="11" height="3.5" rx="1.75" fill="#173042" fill-opacity="0.14"/>
 
-  <!-- Right piece body -->
-  <rect x="35" y="28" width="29" height="24" rx="3" fill="white"/>
-  <!-- Right piece top tab -->
-  <ellipse cx="49.5" cy="26" rx="5" ry="4.5" fill="white"/>
-  <!-- Right piece bottom tab -->
-  <ellipse cx="49.5" cy="54" rx="5" ry="4.5" fill="white"/>
+  <rect x="36" y="53" width="40" height="22" rx="8" fill="#FFF7E8"/>
+  <rect x="36.5" y="53.5" width="39" height="21" rx="7.5" stroke="#F0DEC1"/>
+  <rect x="43" y="60" width="7" height="8" rx="3.5" fill="#F59E0B"/>
+  <rect x="54" y="61" width="14" height="3.5" rx="1.75" fill="#173042" fill-opacity="0.22"/>
+  <rect x="54" y="66.5" width="10" height="3.5" rx="1.75" fill="#173042" fill-opacity="0.14"/>
 
-  <!-- Cover the join between pieces -->
-  <rect x="34" y="28" width="3" height="24" fill="url(#grad)"/>
+  <circle cx="73" cy="25" r="9" fill="#0F766E"/>
+  <path d="M73 17.8L75.5 22.5L80.2 25L75.5 27.5L73 32.2L70.5 27.5L65.8 25L70.5 22.5L73 17.8Z" fill="#FFF7D6"/>
 </svg>
