@@ -29,8 +29,7 @@ struct SkillsSidebar: View {
                     }
                 } header: {
                     Label {
-                        Text(group.source)
-                            .fontWeight(.semibold)
+                        Text(group.source).fontWeight(.semibold)
                     } icon: {
                         Image(systemName: group.source.contains("/") ? "shippingbox" : "folder")
                     }
@@ -40,23 +39,26 @@ struct SkillsSidebar: View {
         .listStyle(.sidebar)
         .overlay {
             if manager.isLoading {
-                ProgressView()
-                    .controlSize(.large)
+                ProgressView().controlSize(.large)
             } else if manager.skills.isEmpty {
-                ContentUnavailableView("No Skills Installed", systemImage: "puzzlepiece.extension", description: Text("Add skills from a GitHub repository."))
+                ContentUnavailableView(
+                    "No Skills Installed",
+                    systemImage: "puzzlepiece.extension",
+                    description: Text("Add skills from a GitHub repository.")
+                )
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if let status = manager.dependencyStatus {
+                VersionFooter(status: status)
             }
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    showAddSheet = true
-                } label: {
+                Button { showAddSheet = true } label: {
                     Label("Add Skill", systemImage: "plus")
                 }
-
-                Button {
-                    Task { await manager.loadSkills() }
-                } label: {
+                Button { Task { await manager.loadSkills() } } label: {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
             }
@@ -69,17 +71,59 @@ struct SkillsSidebar: View {
     }
 }
 
+// MARK: - Version Footer
+
+private struct VersionFooter: View {
+    let status: DependencyStatus
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let version = status.currentSkillsVersion {
+                Label("skills v\(version)", systemImage: "shippingbox")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            } else {
+                Label("skills CLI not found", systemImage: "exclamationmark.triangle")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
+
+            Spacer()
+
+            if status.hasUpdate, let latest = status.latestSkillsVersion {
+                Button {
+                    // Open the Settings window (Environment tab)
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.up.circle.fill")
+                        Text("v\(latest)")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                }
+                .buttonStyle(.borderless)
+                .help("Update skills to v\(latest) — open Settings")
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+}
+
+// MARK: - SkillRow
+
 struct SkillRow: View {
     let skill: Skill
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Image(systemName: skillIcon)
-                    .foregroundStyle(skillColor)
+                Image(systemName: skill.skillIcon)
+                    .foregroundStyle(skill.skillColor)
                     .font(.system(size: 14, weight: .medium))
                     .frame(width: 20)
-
                 Text(skill.displayName)
                     .font(.headline)
                     .lineLimit(1)
@@ -90,35 +134,5 @@ struct SkillRow: View {
                 .lineLimit(2)
         }
         .padding(.vertical, 2)
-    }
-
-    private var skillIcon: String {
-        if skill.name.hasPrefix("ljg-") { return "character.book.closed.fill" }
-        if skill.name.contains("react") { return "atom" }
-        if skill.name.contains("design") { return "paintbrush.fill" }
-        if skill.name.contains("find") { return "magnifyingglass" }
-        if skill.name.contains("browser") { return "globe" }
-        if skill.name.contains("paper") { return "doc.text.fill" }
-        if skill.name.contains("dogfood") { return "ladybug.fill" }
-        if skill.name.contains("sandbox") { return "shippingbox.fill" }
-        if skill.name.contains("a2a") { return "arrow.left.arrow.right" }
-        if skill.name.contains("invest") { return "chart.line.uptrend.xyaxis" }
-        if skill.name.contains("rank") { return "list.number" }
-        if skill.name.contains("relationship") { return "person.2.fill" }
-        if skill.name.contains("roundtable") { return "person.3.fill" }
-        if skill.name.contains("plain") { return "textformat" }
-        return "puzzlepiece.extension.fill"
-    }
-
-    private var skillColor: Color {
-        if skill.name.hasPrefix("ljg-") { return .orange }
-        if skill.name.contains("react") { return .cyan }
-        if skill.name.contains("design") { return .pink }
-        if skill.name.contains("find") { return .blue }
-        if skill.name.contains("browser") { return .green }
-        if skill.name.contains("vercel") { return .purple }
-        if skill.name.contains("dogfood") { return .red }
-        if skill.name.contains("a2a") { return .indigo }
-        return .secondary
     }
 }

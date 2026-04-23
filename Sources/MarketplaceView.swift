@@ -1,13 +1,18 @@
 import SwiftUI
 
+private enum SearchState {
+    case idle
+    case searching
+    case results([MarketplaceSkill])
+    case error(String)
+}
+
 struct MarketplaceView: View {
     @Environment(SkillsManager.self) private var manager
     @State private var searchText = ""
-    @State private var results: [MarketplaceSkill] = []
-    @State private var isSearching = false
-    @State private var hasSearched = false
-    @State private var errorMessage: String?
+    @State private var searchState: SearchState = .idle
     @State private var installingSkill: String?
+    @State private var installError: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,19 +35,8 @@ struct MarketplaceView: View {
 
             Divider()
 
-            if isSearching {
-                Spacer()
-                ProgressView("Searching skills.sh…")
-                Spacer()
-            } else if let error = errorMessage {
-                Spacer()
-                ContentUnavailableView("Search Failed", systemImage: "exclamationmark.triangle", description: Text(error))
-                Spacer()
-            } else if results.isEmpty && hasSearched {
-                Spacer()
-                ContentUnavailableView("No Results", systemImage: "magnifyingglass", description: Text("Try different search terms."))
-                Spacer()
-            } else if results.isEmpty {
+            switch searchState {
+            case .idle:
                 Spacer()
                 ContentUnavailableView {
                     Label("Discover Skills", systemImage: "sparkles")
@@ -50,39 +44,60 @@ struct MarketplaceView: View {
                     Text("Search skills.sh to find and install agent skills.")
                 }
                 Spacer()
-            } else {
-                List(results) { skill in
-                    MarketplaceRow(skill: skill, isInstalling: installingSkill == skill.id) {
-                        installSkill(skill)
+            case .searching:
+                Spacer()
+                ProgressView("Searching skills.sh…")
+                Spacer()
+            case .error(let message):
+                Spacer()
+                ContentUnavailableView("Search Failed", systemImage: "exclamationmark.triangle", description: Text(message))
+                Spacer()
+            case .results(let results):
+                if results.isEmpty {
+                    Spacer()
+                    ContentUnavailableView("No Results", systemImage: "magnifyingglass", description: Text("Try different search terms."))
+                    Spacer()
+                } else {
+                    List(results) { skill in
+                        MarketplaceRow(skill: skill, isInstalling: installingSkill == skill.id) {
+                            installSkill(skill)
+                        }
                     }
+                    .listStyle(.inset)
                 }
-                .listStyle(.inset)
             }
         }
         .navigationTitle("Marketplace")
+        .alert("Install Failed", isPresented: Binding(get: { installError != nil }, set: { _ in installError = nil })) {
+            Button("OK") { installError = nil }
+        } message: {
+            Text(installError ?? "")
+        }
     }
 
     private func performSearch() {
         let query = searchText.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { return }
-        isSearching = true
-        hasSearched = true
-        errorMessage = nil
+        searchState = .searching
 
         Task {
             do {
-                results = try await MarketplaceService.shared.search(query: query)
+                let results = try await MarketplaceService.shared.search(query: query)
+                searchState = .results(results)
             } catch {
-                errorMessage = error.localizedDescription
+                searchState = .error(error.localizedDescription)
             }
-            isSearching = false
         }
     }
 
     private func installSkill(_ skill: MarketplaceSkill) {
         installingSkill = skill.id
         Task {
-            await manager.addSkill(from: skill.source)
+            do {
+                try await manager.addSkill(from: skill.source)
+            } catch {
+                installError = error.localizedDescription
+            }
             installingSkill = nil
         }
     }

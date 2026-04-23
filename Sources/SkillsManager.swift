@@ -1,12 +1,18 @@
 import Foundation
 import SwiftUI
 
+private struct CommandError: LocalizedError {
+    let exitCode: Int32
+    var errorDescription: String? { "Command failed (exit \(exitCode))" }
+}
+
 @Observable
 @MainActor
 final class SkillsManager {
     var skills: [Skill] = []
     var isLoading = false
     var errorMessage: String?
+    var dependencyStatus: DependencyStatus?
 
     private let homePath: String
     private let globalSkillsPath: String
@@ -55,36 +61,21 @@ final class SkillsManager {
         return lockFile.skills
     }
 
+    /// Scans each known agent's skills directory and maps skill folder name → [agentID].
+    /// Derives paths from `allAgents` so this stays in sync automatically.
     private nonisolated static func detectAgentLinks(home: String) throws -> [String: [String]] {
-        let agentDirs: [(name: String, path: String)] = [
-            ("Amp", "\(home)/.agents/skills"),
-            ("Claude Code", "\(home)/.claude/skills"),
-            ("Codex", "\(home)/.codex/skills"),
-            ("Cursor", "\(home)/.cursor/skills"),
-            ("Windsurf", "\(home)/.codeium/windsurf/skills"),
-            ("Gemini CLI", "\(home)/.gemini/skills"),
-            ("Copilot", "\(home)/.copilot/skills"),
-            ("Roo Code", "\(home)/.roo/skills"),
-            ("Cline", "\(home)/.agents/skills"),
-            ("OpenCode", "\(home)/.config/opencode/skills"),
-            ("Trae", "\(home)/.trae/skills"),
-            ("Augment", "\(home)/.augment/skills"),
-            ("Droid", "\(home)/.factory/skills"),
-            ("Kiro", "\(home)/.kiro/skills"),
-            ("Warp", "\(home)/.agents/skills"),
-        ]
-
         var result: [String: [String]] = [:]
         let fm = FileManager.default
 
-        for agent in agentDirs {
-            guard fm.fileExists(atPath: agent.path) else { continue }
-            let contents = try fm.contentsOfDirectory(atPath: agent.path)
+        for agent in allAgents {
+            let agentPath = "\(home)/\(agent.pathSuffix)"
+            guard fm.fileExists(atPath: agentPath) else { continue }
+            let contents = (try? fm.contentsOfDirectory(atPath: agentPath)) ?? []
             for item in contents {
-                let itemPath = "\(agent.path)/\(item)"
+                let itemPath = "\(agentPath)/\(item)"
                 var isDir: ObjCBool = false
                 guard fm.fileExists(atPath: itemPath, isDirectory: &isDir), isDir.boolValue else { continue }
-                result[item, default: []].append(agent.name)
+                result[item, default: []].append(agent.id)
             }
         }
         return result
@@ -130,6 +121,7 @@ final class SkillsManager {
                 id: name,
                 name: name,
                 description: parsed.description ?? "No description",
+                body: parsed.body,
                 path: dirPath,
                 rawContent: content,
                 markdownBody: parsed.body,
@@ -149,49 +141,53 @@ final class SkillsManager {
         return result
     }
 
-    func removeSkill(_ skill: Skill) async {
+    func removeSkill(_ skill: Skill) async throws {
         let name = skill.name
-        do {
-            try await Task.detached {
-                let process = Process()
-                process.executableURL = URL(filePath: "/usr/bin/env")
-                process.arguments = ["npx", "skills", "remove", name, "-y", "-g"]
-                try process.run()
-                process.waitUntilExit()
-            }.value
-            await loadSkills()
-        } catch {
-            errorMessage = "Failed to remove skill: \(error.localizedDescription)"
-        }
+        try await Task.detached {
+            let process = Process()
+            process.executableURL = URL(filePath: "/usr/bin/env")
+            process.arguments = ["npx", "skills", "remove", name, "-y", "-g"]
+            try process.run()
+            process.waitUntilExit()
+            if process.terminationStatus != 0 {
+                throw CommandError(exitCode: process.terminationStatus)
+            }
+        }.value
+        await loadSkills()
     }
 
-    func addSkill(from source: String) async {
-        do {
-            try await Task.detached {
-                let process = Process()
-                process.executableURL = URL(filePath: "/usr/bin/env")
-                process.arguments = ["npx", "skills", "add", source, "--all", "-g", "-y"]
-                try process.run()
-                process.waitUntilExit()
-            }.value
-            await loadSkills()
-        } catch {
-            errorMessage = "Failed to add skill: \(error.localizedDescription)"
-        }
+    func addSkill(from source: String) async throws {
+        try await Task.detached {
+            let process = Process()
+            process.executableURL = URL(filePath: "/usr/bin/env")
+            process.arguments = ["npx", "skills", "add", source, "--all", "-g", "-y"]
+            try process.run()
+            process.waitUntilExit()
+            if process.terminationStatus != 0 {
+                throw CommandError(exitCode: process.terminationStatus)
+            }
+        }.value
+        await loadSkills()
     }
 
-    func checkForUpdates() async {
+    func checkEnvironment() async {
+        dependencyStatus = await EnvironmentChecker.check()
+    }
+
+    func updateSkillsCLI() async {
         do {
             try await Task.detached {
-                let process = Process()
-                process.executableURL = URL(filePath: "/usr/bin/env")
-                process.arguments = ["npx", "skills", "check"]
+                let process = EnvironmentChecker.makeProcess(args: ["npm", "update", "-g", "skills"])
                 try process.run()
                 process.waitUntilExit()
+                if process.terminationStatus != 0 {
+                    throw CommandError(exitCode: process.terminationStatus)
+                }
             }.value
         } catch {
-            errorMessage = "Failed to check updates: \(error.localizedDescription)"
+            errorMessage = error.localizedDescription
         }
+        await checkEnvironment()
     }
 
     func revealInFinder(_ skill: Skill) {
@@ -250,10 +246,5 @@ final class SkillsManager {
         } catch {
             errorMessage = "Failed to install: \(error.localizedDescription)"
         }
-    }
-
-    var groupedBySource: [(source: String, skills: [Skill])] {
-        let grouped = Dictionary(grouping: skills) { $0.source ?? "Local" }
-        return grouped.sorted { $0.key < $1.key }.map { (source: $0.key, skills: $0.value) }
     }
 }

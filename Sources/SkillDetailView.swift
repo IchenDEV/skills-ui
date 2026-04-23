@@ -7,6 +7,7 @@ struct SkillDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showRawContent = false
     @State private var showAddToAgents = false
+    @State private var removeError: String?
 
     var body: some View {
         ScrollView {
@@ -86,10 +87,21 @@ struct SkillDetailView: View {
         }
         .confirmationDialog("Remove \(skill.displayName)?", isPresented: $showDeleteConfirmation) {
             Button("Remove", role: .destructive) {
-                Task { await manager.removeSkill(skill) }
+                Task {
+                    do {
+                        try await manager.removeSkill(skill)
+                    } catch {
+                        removeError = error.localizedDescription
+                    }
+                }
             }
         } message: {
             Text("This will uninstall the skill from all agents. You can reinstall it later from \(skill.source ?? "its source").")
+        }
+        .alert("Remove Failed", isPresented: Binding(get: { removeError != nil }, set: { _ in removeError = nil })) {
+            Button("OK") { removeError = nil }
+        } message: {
+            Text(removeError ?? "")
         }
         .sheet(isPresented: $showAddToAgents) {
             AddToAgentsSheet(skill: skill)
@@ -106,11 +118,11 @@ struct SkillDetailView: View {
                     .fill(iconGradient)
                     .frame(width: 64, height: 64)
                     .overlay {
-                        Image(systemName: skillIcon)
+                        Image(systemName: skill.skillIcon)
                             .font(.system(size: 28, weight: .medium))
                             .foregroundStyle(.white)
                     }
-                    .shadow(color: iconColor.opacity(0.3), radius: 8, y: 4)
+                    .shadow(color: skill.skillColor.opacity(0.3), radius: 8, y: 4)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(skill.displayName)
@@ -149,7 +161,8 @@ struct SkillDetailView: View {
                 }
 
                 if !skill.agents.isEmpty {
-                    MetadataItem(label: "Agents", value: skill.agents.joined(separator: ", "), icon: "cpu")
+                    let names = skill.agents.compactMap { id in SkillsManager.allAgents.first(where: { $0.id == id })?.name }
+                    MetadataItem(label: "Agents", value: names.joined(separator: ", "), icon: "cpu")
                 } else {
                     Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                 }
@@ -191,39 +204,9 @@ struct SkillDetailView: View {
         }
     }
 
-    private var skillIcon: String {
-        if skill.name.hasPrefix("ljg-") { return "character.book.closed.fill" }
-        if skill.name.contains("react") { return "atom" }
-        if skill.name.contains("design") { return "paintbrush.fill" }
-        if skill.name.contains("find") { return "magnifyingglass" }
-        if skill.name.contains("browser") { return "globe" }
-        if skill.name.contains("paper") { return "doc.text.fill" }
-        if skill.name.contains("dogfood") { return "ladybug.fill" }
-        if skill.name.contains("sandbox") { return "shippingbox.fill" }
-        if skill.name.contains("a2a") { return "arrow.left.arrow.right" }
-        if skill.name.contains("invest") { return "chart.line.uptrend.xyaxis" }
-        if skill.name.contains("rank") { return "list.number" }
-        if skill.name.contains("relationship") { return "person.2.fill" }
-        if skill.name.contains("roundtable") { return "person.3.fill" }
-        if skill.name.contains("plain") { return "textformat" }
-        return "puzzlepiece.extension.fill"
-    }
-
-    private var iconColor: Color {
-        if skill.name.hasPrefix("ljg-") { return .orange }
-        if skill.name.contains("react") { return .cyan }
-        if skill.name.contains("design") { return .pink }
-        if skill.name.contains("find") { return .blue }
-        if skill.name.contains("browser") { return .green }
-        if skill.name.contains("vercel") { return .purple }
-        if skill.name.contains("dogfood") { return .red }
-        if skill.name.contains("a2a") { return .indigo }
-        return .gray
-    }
-
     private var iconGradient: LinearGradient {
         LinearGradient(
-            colors: [iconColor, iconColor.opacity(0.7)],
+            colors: [skill.skillColor, skill.skillColor.opacity(0.7)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -239,7 +222,7 @@ struct AddToAgentsSheet: View {
     @State private var selectedAgents: Set<String> = []
     @State private var isInstalling = false
 
-    private var installedAgentNames: Set<String> {
+    private var installedAgentIDs: Set<String> {
         Set(skill.agents)
     }
 
@@ -266,7 +249,7 @@ struct AddToAgentsSheet: View {
 
             // Agent list
             List(SkillsManager.allAgents, id: \.id, selection: $selectedAgents) { agent in
-                let isInstalled = installedAgentNames.contains(agent.name)
+                let isInstalled = installedAgentIDs.contains(agent.id)
                 HStack {
                     VStack(alignment: .leading) {
                         Text(agent.name)

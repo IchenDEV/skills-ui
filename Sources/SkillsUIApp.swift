@@ -35,6 +35,11 @@ struct SkillsUIApp: App {
         }
         .windowStyle(.automatic)
         .defaultSize(width: 1000, height: 680)
+
+        Settings {
+            SettingsView()
+                .environment(skillsManager)
+        }
     }
 
     private static func makeFallbackIcon() -> NSImage {
