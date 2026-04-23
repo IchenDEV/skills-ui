@@ -40,7 +40,7 @@
 ### Prerequisites
 
 - **macOS 26** (Tahoe) or later
-- **Swift 6.2+** toolchain (ships with Xcode 26+)
+- **Xcode 26+** (or an equivalent Swift 6.2 toolchain with full macOS UI macro support)
 - **Node.js** — SkillsUI will guide you through installation on first launch if it's missing
 
 > **Tip:** You don't need to install the skills CLI manually. SkillsUI detects whether it's present and offers installation guidance in the onboarding sheet and in **Settings → Environment**.
@@ -64,15 +64,26 @@ swift run SkillsUI
 ### Build for Release
 
 ```bash
-swift build -c release
-cp .build/release/SkillsUI /usr/local/bin/
+./scripts/package-dmg.sh
+open dist
 ```
 
-> **Note:** Binaries built locally are unsigned. If macOS blocks the app, run `xattr -cr SkillsUI` once to clear the quarantine flag.
+This creates:
+
+- `dist/SkillsUI.app`
+- `dist/SkillsUI.dmg`
+
+Install it like a normal Mac app: open the DMG and drag `SkillsUI.app` into `Applications`.
+
+The current packaging flow is for local distribution and testing. It uses an ad-hoc signature by default, and it does not include Developer ID signing or notarization yet.
+
+If `xcode-select -p` still points at Command Line Tools, the packaging script automatically switches builds to `/Applications/Xcode.app/Contents/Developer` when that Xcode install exists.
+
+> **Note:** Locally built app bundles are still unsigned for public distribution. If macOS blocks a local build, run `xattr -cr dist/SkillsUI.app` once to clear the quarantine flag.
 
 ### Download a Pre-built Binary
 
-Pre-built binaries (arm64) are attached to every [GitHub Release](https://github.com/IchenDEV/skills-ui/releases). Each release includes a `.sha256` checksum file for verification.
+Pre-built arm64 binaries are attached to every [GitHub Release](https://github.com/IchenDEV/skills-ui/releases). Each release includes a `.sha256` checksum file for verification.
 
 ```bash
 # Verify checksum after download
@@ -84,22 +95,32 @@ shasum -a 256 -c SkillsUI-*.tar.gz.sha256
 ```
 Sources/
 ├── SkillsUIApp.swift          # @main entry, window config, app icon, Settings scene
-├── ContentView.swift           # TabView (Installed / Marketplace) + onboarding trigger
-├── SkillsSidebar.swift         # Sidebar list, grouped by source, version footer
-├── SkillDetailView.swift       # Detail pane — metadata grid + SKILL.md
-├── AddSkillSheet.swift         # Sheet for adding skills from GitHub
-├── MarketplaceView.swift       # Marketplace search UI
-├── MarketplaceService.swift    # skills.sh API client (actor)
-├── MarketplaceSkill.swift      # Marketplace data model
-├── SkillsManager.swift         # Core state — scanning, install, remove, env check
-├── Skill.swift                 # Installed skill model
-├── Skill+UI.swift              # SwiftUI extension: skillColor
-├── SkillParser.swift           # SKILL.md YAML frontmatter parser
-├── SkillLock.swift             # .skill-lock.json Codable types
-├── DependencyChecker.swift     # DependencyStatus model + EnvironmentChecker
-├── OnboardingView.swift        # Setup sheet shown when Node/skills CLI is missing
-├── SettingsView.swift          # Settings window (About + Environment tabs)
-└── AppVersion.swift            # Version string — overwritten by CI on release builds
+├── ContentView.swift          # TabView (Installed / Marketplace) + onboarding trigger
+├── SkillsSidebar.swift        # Sidebar list, grouped by source, version footer
+├── SkillDetailView.swift      # Detail pane — metadata grid + SKILL.md
+├── SkillMarkdownView.swift    # Native Textual renderer + local markdown styling
+├── AddSkillSheet.swift        # Sheet for adding skills from GitHub
+├── MarketplaceView.swift      # Marketplace search UI
+├── MarketplaceService.swift   # skills.sh API client (actor)
+├── MarketplaceSkill.swift     # Marketplace data model
+├── SkillsManager.swift        # Core state — scanning, install, remove, env check
+├── Skill.swift                # Installed skill model
+├── Skill+UI.swift             # SwiftUI extension: skillColor
+├── SkillParser.swift          # SKILL.md YAML frontmatter parser
+├── SkillLock.swift            # .skill-lock.json Codable types
+├── DependencyChecker.swift    # DependencyStatus model + EnvironmentChecker
+├── OnboardingView.swift       # Setup sheet shown when Node/skills CLI is missing
+├── SettingsView.swift         # Settings window (About + Environment tabs)
+└── AppVersion.swift           # Version string — overwritten by CI on release builds
+
+Packaging/
+├── AppIcon.iconset/           # Source PNGs for the bundled app icon
+├── AppIcon.icns               # Bundled app icon used by Finder/Dock
+└── Info.plist.template        # App bundle metadata template
+
+scripts/
+├── package-dmg.sh             # Builds SkillsUI.app and SkillsUI.dmg
+└── render-app-icon.swift      # Regenerates the tracked iconset PNGs
 ```
 
 ### Key Design Decisions
@@ -107,6 +128,7 @@ Sources/
 - **SwiftPM executable** — no Xcode project required; builds with `swift build`
 - **`@Observable` + actors** — Swift 6 strict concurrency throughout
 - **No third-party UI deps** — pure SwiftUI with native macOS look & feel
+- **`Textual`** — direct rendering dependency for native, block-level Markdown previews
 - **Version baked at build time** — CI overwrites `AppVersion.swift` with the Release tag before `swift build -c release`
 
 ## Supported Agents

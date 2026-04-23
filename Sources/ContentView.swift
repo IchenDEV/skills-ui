@@ -16,19 +16,25 @@ struct ContentView: View {
     @Environment(SkillsManager.self) private var manager
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: AppTab = .installed
-    @State private var selectedSkill: Skill?
+    @State private var selectedSkillID: Skill.ID?
     @State private var searchText = ""
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showOnboarding = false
+
+    private var selectedSkill: Skill? {
+        guard let selectedSkillID else { return nil }
+        return manager.skills.first { $0.id == selectedSkillID }
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab(AppTab.installed.rawValue, systemImage: AppTab.installed.icon, value: .installed) {
                 NavigationSplitView(columnVisibility: $columnVisibility) {
-                    SkillsSidebar(selectedSkill: $selectedSkill, searchText: $searchText)
+                    SkillsSidebar(selectedSkillID: $selectedSkillID, searchText: $searchText)
                 } detail: {
                     if let skill = selectedSkill {
                         SkillDetailView(skill: skill)
+                            .id(skill.renderCacheKey)
                     } else {
                         ContentUnavailableView(
                             "Select a Skill",

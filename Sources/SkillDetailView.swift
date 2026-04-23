@@ -195,18 +195,12 @@ struct SkillDetailView: View {
                         .padding(12)
                 }
             } else {
-                Text(markdownToAttributed(skill.body))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                SkillMarkdownView(
+                    markdown: skill.markdownBody,
+                    baseURL: URL(filePath: skill.path, directoryHint: .isDirectory),
+                    renderKey: skill.renderCacheKey
+                )
             }
-        }
-    }
-
-    private func markdownToAttributed(_ markdown: String) -> AttributedString {
-        do {
-            return try AttributedString(markdown: markdown, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
-        } catch {
-            return AttributedString(markdown)
         }
     }
 

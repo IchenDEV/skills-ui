@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SkillsSidebar: View {
     @Environment(SkillsManager.self) private var manager
-    @Binding var selectedSkill: Skill?
+    @Binding var selectedSkillID: Skill.ID?
     @Binding var searchText: String
     @State private var showAddSheet = false
 
@@ -20,12 +20,12 @@ struct SkillsSidebar: View {
     }
 
     var body: some View {
-        List(selection: $selectedSkill) {
+        List(selection: $selectedSkillID) {
             ForEach(groupedSkills, id: \.source) { group in
                 Section {
                     ForEach(group.skills) { skill in
                         SkillRow(skill: skill)
-                            .tag(skill)
+                            .tag(skill.id)
                     }
                 } header: {
                     Label {

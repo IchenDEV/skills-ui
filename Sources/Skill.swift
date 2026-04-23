@@ -7,6 +7,8 @@ struct Skill: Identifiable, Hashable, Sendable {
     let body: String
     let path: String
     let rawContent: String
+    let markdownBody: String
+    let contentHash: Int
     let source: String?        // e.g. "vercel-labs/agent-skills"
     let sourceType: String?    // "github", "local", etc.
     let sourceUrl: String?
@@ -29,6 +31,10 @@ struct Skill: Identifiable, Hashable, Sendable {
         return URL(string: "https://github.com/\(source)")
     }
 
+    var renderCacheKey: String {
+        "\(id):\(contentHash)"
+    }
+
     var skillIcon: String {
         if name.hasPrefix("ljg-") { return "character.book.closed.fill" }
         if name.contains("react") { return "atom" }
@@ -45,6 +51,14 @@ struct Skill: Identifiable, Hashable, Sendable {
         if name.contains("roundtable") { return "person.3.fill" }
         if name.contains("plain") { return "textformat" }
         return "puzzlepiece.extension.fill"
+    }
+
+    static func == (lhs: Skill, rhs: Skill) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 

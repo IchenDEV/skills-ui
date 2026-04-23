@@ -40,7 +40,7 @@
 ### 前置条件
 
 - **macOS 26**（Tahoe）或更高版本
-- **Swift 6.2+** 工具链（随 Xcode 26+ 附带）
+- **Xcode 26+**（或具备完整 macOS UI 宏支持的 Swift 6.2 工具链）
 - **Node.js** — 若首次启动时未检测到，SkillsUI 会引导你完成安装
 
 > **提示：** 无需手动安装 skills CLI。SkillsUI 会在启动引导和**设置 → 运行环境**页面中检测并提供安装指引。
@@ -61,14 +61,25 @@ swift build
 swift run SkillsUI
 ```
 
-### Release 构建
+### 打包 DMG
 
 ```bash
-swift build -c release
-cp .build/release/SkillsUI /usr/local/bin/
+./scripts/package-dmg.sh
+open dist
 ```
 
-> **注意：** 本地构建的二进制文件未经签名。若 macOS 阻止运行，执行一次 `xattr -cr SkillsUI` 清除隔离标志即可。
+运行后会产出：
+
+- `dist/SkillsUI.app`
+- `dist/SkillsUI.dmg`
+
+安装方式就是标准 macOS 流程：打开 DMG，把 `SkillsUI.app` 拖进 `Applications`。
+
+这一版打包主要用于本地分发和测试。脚本默认做 ad-hoc 签名，但还没有接 Developer ID 签名和 notarization。
+
+如果你本机的 `xcode-select -p` 还指向 Command Line Tools，而 `/Applications/Xcode.app` 又已经装好了，打包脚本会自动切过去用完整 Xcode 工具链。
+
+> **注意：** 本地构建出来的 App 还不是面向公网分发的正式签名产物。若 macOS 阻止运行，可执行一次 `xattr -cr dist/SkillsUI.app` 清除隔离标志。
 
 ### 下载预构建二进制
 
@@ -84,22 +95,32 @@ shasum -a 256 -c SkillsUI-*.tar.gz.sha256
 ```
 Sources/
 ├── SkillsUIApp.swift          # @main 入口，窗口配置，应用图标，Settings 场景
-├── ContentView.swift           # TabView（已安装 / 应用市场）+ 引导触发
-├── SkillsSidebar.swift         # 侧栏列表，按来源分组，底部版本角标
-├── SkillDetailView.swift       # 详情面板 — 元数据网格 + SKILL.md
-├── AddSkillSheet.swift         # 从 GitHub 添加技能的弹窗
-├── MarketplaceView.swift       # 应用市场搜索界面
-├── MarketplaceService.swift    # skills.sh API 客户端（actor）
-├── MarketplaceSkill.swift      # 市场数据模型
-├── SkillsManager.swift         # 核心状态管理 — 扫描、安装、移除、环境检查
-├── Skill.swift                 # 已安装技能模型
-├── Skill+UI.swift              # SwiftUI 扩展：skillColor
-├── SkillParser.swift           # SKILL.md YAML frontmatter 解析器
-├── SkillLock.swift             # .skill-lock.json Codable 类型
-├── DependencyChecker.swift     # DependencyStatus 模型 + EnvironmentChecker
-├── OnboardingView.swift        # 缺少 Node / skills CLI 时显示的安装引导弹窗
-├── SettingsView.swift          # 设置窗口（关于 + 运行环境 两个标签页）
-└── AppVersion.swift            # 版本字符串 — Release 构建时由 CI 覆写
+├── ContentView.swift          # TabView（已安装 / 应用市场）+ 引导触发
+├── SkillsSidebar.swift        # 侧栏列表，按来源分组，底部版本角标
+├── SkillDetailView.swift      # 详情面板 — 元数据网格 + SKILL.md
+├── SkillMarkdownView.swift    # 原生 Textual 渲染器 + 本地 Markdown 样式
+├── AddSkillSheet.swift        # 从 GitHub 添加技能的弹窗
+├── MarketplaceView.swift      # 应用市场搜索界面
+├── MarketplaceService.swift   # skills.sh API 客户端（actor）
+├── MarketplaceSkill.swift     # 市场数据模型
+├── SkillsManager.swift        # 核心状态管理 — 扫描、安装、移除、环境检查
+├── Skill.swift                # 已安装技能模型
+├── Skill+UI.swift             # SwiftUI 扩展：skillColor
+├── SkillParser.swift          # SKILL.md YAML frontmatter 解析器
+├── SkillLock.swift            # .skill-lock.json Codable 类型
+├── DependencyChecker.swift    # DependencyStatus 模型 + EnvironmentChecker
+├── OnboardingView.swift       # 缺少 Node / skills CLI 时显示的安装引导弹窗
+├── SettingsView.swift         # 设置窗口（关于 + 运行环境 两个标签页）
+└── AppVersion.swift           # 版本字符串 — Release 构建时由 CI 覆写
+
+Packaging/
+├── AppIcon.iconset/           # App 图标的源 PNG 集合
+├── AppIcon.icns               # Finder / Dock 使用的打包图标
+└── Info.plist.template        # App bundle 元数据模板
+
+scripts/
+├── package-dmg.sh             # 生成 SkillsUI.app 和 SkillsUI.dmg
+└── render-app-icon.swift      # 重新生成仓库里的图标 PNG
 ```
 
 ### 设计理念
@@ -107,16 +128,8 @@ Sources/
 - **SwiftPM 可执行文件** — 无需 Xcode 项目，`swift build` 即可构建
 - **`@Observable` + actor** — 全面采用 Swift 6 严格并发
 - **零第三方 UI 依赖** — 纯 SwiftUI，原生 macOS 风格
+- **`Textual`** — 直接承担原生块级 Markdown 渲染
 - **构建时注入版本号** — CI 在 `swift build -c release` 之前将 Release Tag 写入 `AppVersion.swift`，确保**设置 → 关于**中始终显示正确版本
-
-## 发布新版本
-
-推送符合 `v*` 格式的 Tag，CI 工作流将自动构建二进制文件并上传到对应的 GitHub Release：
-
-```bash
-git tag v1.2.3
-git push origin v1.2.3
-```
 
 ## 工作原理
 
@@ -161,6 +174,17 @@ git push origin v1.2.3
 | OpenHands | `~/.openhands/skills` |
 | Qwen Code | `~/.qwen/skills` |
 | Trae CN | `~/.trae-cn/skills` |
+
+## 发布新版本
+
+推送符合 `v*` 格式的 Tag，CI 工作流将自动构建二进制文件并上传到对应的 GitHub Release：
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+工作流会在构建前把 Tag 版本写入 `AppVersion.swift`，所以**设置 → 关于**里显示的版本号会和发布版本保持一致。
 
 ## 贡献
 
