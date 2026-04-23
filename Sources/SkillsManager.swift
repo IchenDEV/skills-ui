@@ -117,6 +117,10 @@ final class SkillsManager {
 
             guard let name = parsed.name else { continue }
 
+            var hasher = Hasher()
+            hasher.combine(content)
+            let contentHash = hasher.finalize()
+
             let lockEntry = lockEntries[name] ?? lockEntries[dir]
 
             let attrs = try fm.attributesOfItem(atPath: dirPath)
@@ -128,6 +132,8 @@ final class SkillsManager {
                 description: parsed.description ?? "No description",
                 path: dirPath,
                 rawContent: content,
+                markdownBody: parsed.body,
+                contentHash: contentHash,
                 source: lockEntry?.source,
                 sourceType: lockEntry?.sourceType,
                 sourceUrl: lockEntry?.sourceUrl,

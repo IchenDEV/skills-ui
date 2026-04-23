@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://developer.apple.com/assets/elements/icons/swiftui/swiftui-96x96_2x.png" width="80" alt="SkillsUI Icon" />
+  <img src="Packaging/AppIcon.iconset/icon_256x256.png" width="80" alt="SkillsUI Icon" />
 </p>
 
 <h1 align="center">SkillsUI</h1>
@@ -41,7 +41,7 @@
 ### 前置条件
 
 - **macOS 26**（Tahoe）或更高版本
-- **Swift 6.2+** 工具链（随 Xcode 26+ 附带）
+- **Xcode 26+**（或具备完整 macOS UI 宏支持的 Swift 6.2 工具链）
 - [`npx skills`](https://skills.sh) CLI 已全局安装（`npm i -g skills`）
 
 ### 构建并运行
@@ -60,12 +60,23 @@ swift run SkillsUI
 open .build/debug/SkillsUI
 ```
 
-### Release 构建
+### 打包 DMG
 
 ```bash
-swift build -c release
-cp .build/release/SkillsUI /usr/local/bin/
+./scripts/package-dmg.sh
+open dist
 ```
+
+运行后会产出：
+
+- `dist/SkillsUI.app`
+- `dist/SkillsUI.dmg`
+
+安装方式就是标准 macOS 流程：打开 DMG，把 `SkillsUI.app` 拖进 `Applications`。
+
+这一版打包主要用于本地分发和测试。脚本默认做 ad-hoc 签名，但还没有接 Developer ID 签名和 notarization。
+
+如果你本机的 `xcode-select -p` 还指向 Command Line Tools，而 `/Applications/Xcode.app` 又已经装好了，打包脚本会自动切过去用完整 Xcode 工具链。
 
 ## 项目结构
 
@@ -75,6 +86,7 @@ Sources/
 ├── ContentView.swift           # TabView（已安装 / 应用市场）
 ├── SkillsSidebar.swift         # 侧栏列表，按来源分组
 ├── SkillDetailView.swift       # 详情面板 — 元数据网格 + SKILL.md
+├── SkillMarkdownView.swift     # 原生 Textual 渲染器 + 本地 Markdown 样式
 ├── AddSkillSheet.swift         # 从 GitHub 添加技能的弹窗
 ├── MarketplaceView.swift       # 应用市场搜索界面
 ├── MarketplaceService.swift    # skills.sh API 客户端（actor）
@@ -83,6 +95,15 @@ Sources/
 ├── Skill.swift                 # 已安装技能模型
 ├── SkillParser.swift           # SKILL.md YAML frontmatter 解析器
 └── SkillLock.swift             # .skill-lock.json Codable 类型
+
+Packaging/
+├── AppIcon.iconset/            # App 图标的源 PNG 集合
+├── AppIcon.icns                # Finder / Dock 使用的打包图标
+└── Info.plist.template         # App bundle 元数据模板
+
+scripts/
+├── package-dmg.sh              # 生成 SkillsUI.app 和 SkillsUI.dmg
+└── render-app-icon.swift       # 重新生成仓库里的图标 PNG
 ```
 
 ### 设计理念
@@ -90,7 +111,7 @@ Sources/
 - **SwiftPM 可执行文件** — 无需 Xcode 项目，`swift build` 即可构建
 - **`@Observable` + actor** — 全面采用 Swift 6 严格并发
 - **零第三方 UI 依赖** — 纯 SwiftUI，原生 macOS 风格
-- **`swift-markdown`** — 唯一依赖，用于 Markdown 渲染
+- **`Textual`** — 直接承担原生块级 Markdown 渲染
 
 ## 工作原理
 

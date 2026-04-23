@@ -6,6 +6,8 @@ struct Skill: Identifiable, Hashable, Sendable {
     let description: String
     let path: String
     let rawContent: String
+    let markdownBody: String
+    let contentHash: Int
     let source: String?        // e.g. "vercel-labs/agent-skills"
     let sourceType: String?    // "github", "local", etc.
     let sourceUrl: String?
@@ -26,6 +28,18 @@ struct Skill: Identifiable, Hashable, Sendable {
     var githubURL: URL? {
         guard let source, sourceType == "github" else { return nil }
         return URL(string: "https://github.com/\(source)")
+    }
+
+    var renderCacheKey: String {
+        "\(id):\(contentHash)"
+    }
+
+    static func == (lhs: Skill, rhs: Skill) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 

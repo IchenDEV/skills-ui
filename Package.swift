@@ -6,13 +6,13 @@ let package = Package(
     name: "SkillsUI",
     platforms: [.macOS(.v26)],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-markdown", from: "0.6.0"),
+        .package(url: "https://github.com/gonzalezreal/textual.git", from: "0.3.1"),
     ],
     targets: [
         .executableTarget(
             name: "SkillsUI",
             dependencies: [
-                .product(name: "Markdown", package: "swift-markdown"),
+                .product(name: "Textual", package: "textual"),
             ],
             path: "Sources"
         ),

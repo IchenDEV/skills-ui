@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://developer.apple.com/assets/elements/icons/swiftui/swiftui-96x96_2x.png" width="80" alt="SkillsUI Icon" />
+  <img src="Packaging/AppIcon.iconset/icon_256x256.png" width="80" alt="SkillsUI Icon" />
 </p>
 
 <h1 align="center">SkillsUI</h1>
@@ -46,7 +46,7 @@
 ### Prerequisites
 
 - **macOS 26** (Tahoe) or later
-- **Swift 6.2+** toolchain (ships with Xcode 26+)
+- **Xcode 26+** (or an equivalent Swift 6.2 toolchain with full macOS UI macro support)
 - [`npx skills`](https://skills.sh) CLI installed globally (`npm i -g skills`)
 
 ### Build & Run
@@ -68,9 +68,20 @@ open .build/debug/SkillsUI
 ### Build for Release
 
 ```bash
-swift build -c release
-cp .build/release/SkillsUI /usr/local/bin/
+./scripts/package-dmg.sh
+open dist
 ```
+
+This creates:
+
+- `dist/SkillsUI.app`
+- `dist/SkillsUI.dmg`
+
+Install it like a normal Mac app: open the DMG and drag `SkillsUI.app` into `Applications`.
+
+The current packaging flow is for local distribution and testing. It uses an ad-hoc signature by default, and it does not include Developer ID signing or notarization yet.
+
+If `xcode-select -p` still points at Command Line Tools, the packaging script automatically switches builds to `/Applications/Xcode.app/Contents/Developer` when that Xcode install exists.
 
 ## Architecture
 
@@ -80,6 +91,7 @@ Sources/
 ├── ContentView.swift           # TabView (Installed / Marketplace)
 ├── SkillsSidebar.swift         # Sidebar list, grouped by source
 ├── SkillDetailView.swift       # Detail pane — metadata grid + SKILL.md
+├── SkillMarkdownView.swift     # Native Textual renderer + local markdown styling
 ├── AddSkillSheet.swift         # Sheet for adding skills from GitHub
 ├── MarketplaceView.swift       # Marketplace search UI
 ├── MarketplaceService.swift    # skills.sh API client (actor)
@@ -88,6 +100,15 @@ Sources/
 ├── Skill.swift                 # Installed skill model
 ├── SkillParser.swift           # SKILL.md YAML frontmatter parser
 └── SkillLock.swift             # .skill-lock.json Codable types
+
+Packaging/
+├── AppIcon.iconset/            # Source PNGs for the bundled app icon
+├── AppIcon.icns                # Bundled app icon used by Finder/Dock
+└── Info.plist.template         # App bundle metadata template
+
+scripts/
+├── package-dmg.sh              # Builds SkillsUI.app and SkillsUI.dmg
+└── render-app-icon.swift       # Regenerates the tracked iconset PNGs
 ```
 
 ### Key Design Decisions
@@ -95,7 +116,7 @@ Sources/
 - **SwiftPM executable** — no Xcode project required; builds with `swift build`
 - **`@Observable` + actors** — Swift 6 strict concurrency throughout
 - **No third-party UI deps** — pure SwiftUI with native macOS look & feel
-- **`swift-markdown`** — only dependency, used for Markdown rendering
+- **`Textual`** — direct rendering dependency for native, block-level Markdown previews
 
 ## Supported Agents
 
