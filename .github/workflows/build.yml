@@ -13,7 +13,7 @@ concurrency:
 jobs:
   build:
     name: Build & Test
-    runs-on: macos-15
+    runs-on: macos-26
     permissions:
       contents: read
     steps:
@@ -42,7 +42,7 @@ jobs:
     name: Create Release Artifact
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: macos-15
+    runs-on: macos-26
     permissions:
       contents: read
     steps:
