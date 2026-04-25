@@ -106,16 +106,93 @@ enum EnvironmentChecker {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Returns a Process with an enriched PATH covering common Homebrew install locations,
-    /// so that GUI app context (which inherits a minimal PATH) can find node/npm.
+    /// Returns a Process with an enriched PATH so GUI app context can find node/npm.
     static func makeProcess(args: [String]) -> Process {
         let process = Process()
         process.executableURL = URL(filePath: "/usr/bin/env")
         process.arguments = args
         var env = ProcessInfo.processInfo.environment
-        let extra = "/opt/homebrew/bin:/usr/local/bin"
-        env["PATH"] = [extra, env["PATH"] ?? "/usr/bin:/bin"].joined(separator: ":")
+        env["PATH"] = commandSearchPath(
+            existingPath: env["PATH"],
+            loginShellPath: cachedLoginShellPath
+        )
         process.environment = env
         return process
+    }
+
+    static func commandSearchPath(existingPath: String?, loginShellPath: String? = cachedLoginShellPath) -> String {
+        let home = NSHomeDirectory()
+        let shellEntries = (loginShellPath ?? "")
+            .split(separator: ":")
+            .map(String.init)
+        let fallbackEntries = [
+            "\(home)/n/bin",
+            "\(home)/.n/bin",
+            "\(home)/.volta/bin",
+            "\(home)/.local/bin",
+            "\(home)/.npm-global/bin",
+            "\(home)/.nodenv/shims",
+            "\(home)/.asdf/shims",
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin",
+        ]
+        let inheritedEntries = (existingPath ?? "")
+            .split(separator: ":")
+            .map(String.init)
+
+        return (shellEntries + fallbackEntries + inheritedEntries)
+            .reduce(into: [String]()) { entries, entry in
+                guard !entry.isEmpty, !entries.contains(entry) else { return }
+                entries.append(entry)
+            }
+            .joined(separator: ":")
+    }
+
+    private static let cachedLoginShellPath = readLoginShellPath()
+
+    private static func readLoginShellPath() -> String? {
+        let env = ProcessInfo.processInfo.environment
+        let shell = env["SHELL"] ?? "/bin/zsh"
+        guard FileManager.default.isExecutableFile(atPath: shell) else { return nil }
+
+        let begin = "__SKILLSUI_PATH_BEGIN__"
+        let end = "__SKILLSUI_PATH_END__"
+        let process = Process()
+        process.executableURL = URL(filePath: shell)
+        process.arguments = [
+            "-lic",
+            "printf '%s\\n%s\\n%s\\n' '\(begin)' \"$PATH\" '\(end)'",
+        ]
+
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+        } catch {
+            return nil
+        }
+
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return nil }
+
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        guard let text = String(data: data, encoding: .utf8) else { return nil }
+        return markedValue(in: text, begin: begin, end: end)
+    }
+
+    private static func markedValue(in text: String, begin: String, end: String) -> String? {
+        guard let beginRange = text.range(of: begin),
+              let endRange = text.range(of: end, range: beginRange.upperBound..<text.endIndex) else {
+            return nil
+        }
+
+        return String(text[beginRange.upperBound..<endRange.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
