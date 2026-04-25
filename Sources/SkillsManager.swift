@@ -144,9 +144,7 @@ final class SkillsManager {
     func removeSkill(_ skill: Skill) async throws {
         let name = skill.name
         try await Task.detached {
-            let process = Process()
-            process.executableURL = URL(filePath: "/usr/bin/env")
-            process.arguments = ["npx", "skills", "remove", name, "-y", "-g"]
+            let process = EnvironmentChecker.makeProcess(args: ["npx", "skills", "remove", name, "-y", "-g"])
             try process.run()
             process.waitUntilExit()
             if process.terminationStatus != 0 {
@@ -158,9 +156,7 @@ final class SkillsManager {
 
     func addSkill(from source: String) async throws {
         try await Task.detached {
-            let process = Process()
-            process.executableURL = URL(filePath: "/usr/bin/env")
-            process.arguments = ["npx", "skills", "add", source, "--all", "-g", "-y"]
+            let process = EnvironmentChecker.makeProcess(args: ["npx", "skills", "add", source, "--all", "-g", "-y"])
             try process.run()
             process.waitUntilExit()
             if process.terminationStatus != 0 {
