@@ -54,10 +54,14 @@ struct ContentView: View {
         }
         .task {
             await manager.loadSkills()
+            keepSelectionValid()
             await manager.checkEnvironment()
             if !(manager.dependencyStatus?.skillsReady ?? true) {
                 showOnboarding = true
             }
+        }
+        .onChange(of: manager.selectedScope) { _, _ in
+            keepSelectionValid()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
@@ -67,5 +71,12 @@ struct ContentView: View {
         .sheet(isPresented: $showOnboarding) {
             OnboardingView()
         }
+    }
+
+    private func keepSelectionValid() {
+        if let selectedSkillID, manager.skills.contains(where: { $0.id == selectedSkillID }) {
+            return
+        }
+        selectedSkillID = manager.skills.first?.id
     }
 }

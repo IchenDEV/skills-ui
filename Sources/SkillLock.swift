@@ -14,10 +14,11 @@ struct SkillLockFile: Codable, Sendable {
 struct SkillLockEntry: Codable, Sendable {
     let source: String
     let sourceType: String
-    let sourceUrl: String
+    let sourceUrl: String?
     let skillPath: String?
     let skillFolderHash: String?
+    let computedHash: String?
     let pluginName: String?
-    let installedAt: String
-    let updatedAt: String
+    let installedAt: String?
+    let updatedAt: String?
 }

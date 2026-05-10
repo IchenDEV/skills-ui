@@ -72,4 +72,27 @@ enum SkillScope: String, CaseIterable, Sendable {
         case .project: "folder"
         }
     }
+
+    var listTitle: String {
+        switch self {
+        case .global: "Global Skills"
+        case .project: "Project Skills"
+        }
+    }
+
+    var emptyTitle: String {
+        switch self {
+        case .global: "No Global Skills"
+        case .project: "No Project Skills"
+        }
+    }
+
+    func emptyDescription(projectPath: String) -> String {
+        switch self {
+        case .global:
+            "Add skills from a GitHub repository."
+        case .project:
+            "No project skills found in \(projectPath)."
+        }
+    }
 }
