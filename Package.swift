@@ -16,6 +16,11 @@ let package = Package(
             ],
             path: "Sources"
         ),
+        .testTarget(
+            name: "SkillsUITests",
+            dependencies: ["SkillsUI"],
+            path: "Tests"
+        ),
     ],
     swiftLanguageModes: [.v6]
 )
