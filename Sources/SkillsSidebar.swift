@@ -20,31 +20,47 @@ struct SkillsSidebar: View {
     }
 
     var body: some View {
-        List(selection: $selectedSkillID) {
-            ForEach(groupedSkills, id: \.source) { group in
-                Section {
-                    ForEach(group.skills) { skill in
-                        SkillRow(skill: skill)
-                            .tag(skill.id)
-                    }
-                } header: {
-                    Label {
-                        Text(group.source).fontWeight(.semibold)
-                    } icon: {
-                        Image(systemName: group.source.contains("/") ? "shippingbox" : "folder")
+        VStack(spacing: 0) {
+            Picker("Scope", selection: Binding(
+                get: { manager.selectedScope },
+                set: { manager.selectedScope = $0 }
+            )) {
+                ForEach(SkillScope.allCases, id: \.self) { scope in
+                    Label(scope.rawValue, systemImage: scope.icon)
+                        .tag(scope)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+
+            List(selection: $selectedSkillID) {
+                ForEach(groupedSkills, id: \.source) { group in
+                    Section {
+                        ForEach(group.skills) { skill in
+                            SkillRow(skill: skill)
+                                .tag(skill.id)
+                        }
+                    } header: {
+                        Label {
+                            Text(group.source).fontWeight(.semibold)
+                        } icon: {
+                            Image(systemName: group.source.contains("/") ? "shippingbox" : "folder")
+                        }
                     }
                 }
             }
+            .listStyle(.sidebar)
         }
-        .listStyle(.sidebar)
         .overlay {
             if manager.isLoading {
                 ProgressView().controlSize(.large)
             } else if manager.skills.isEmpty {
                 ContentUnavailableView(
-                    "No Skills Installed",
+                    manager.selectedScope.emptyTitle,
                     systemImage: "puzzlepiece.extension",
-                    description: Text("Add skills from a GitHub repository.")
+                    description: Text(manager.selectedScope.emptyDescription(projectPath: manager.projectDisplayPath))
                 )
             }
         }
@@ -66,8 +82,18 @@ struct SkillsSidebar: View {
         .sheet(isPresented: $showAddSheet) {
             AddSkillSheet()
         }
-        .navigationTitle("Skills")
-        .navigationSubtitle("\(manager.skills.count) installed")
+        .navigationTitle(manager.selectedScope.listTitle)
+        .navigationSubtitle(subtitle)
+    }
+
+    private var subtitle: String {
+        let count = manager.skills.count
+        switch manager.selectedScope {
+        case .global:
+            return "\(count) global"
+        case .project:
+            return "\(count) in \(manager.projectDisplayPath)"
+        }
     }
 }
 

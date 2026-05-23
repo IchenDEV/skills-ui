@@ -94,7 +94,7 @@ struct MarketplaceView: View {
         installingSkill = skill.id
         Task {
             do {
-                try await manager.addSkill(from: skill.source)
+                try await manager.addSkill(from: skill.source, scope: .global)
             } catch {
                 installError = error.localizedDescription
             }

@@ -6,7 +6,7 @@ struct SkillDetailView: View {
     let skill: Skill
     @State private var showDeleteConfirmation = false
     @State private var showRawContent = false
-    @State private var showAddToAgents = false
+    @State private var showManageAgents = false
     @State private var removeError: String?
 
     var body: some View {
@@ -53,11 +53,11 @@ struct SkillDetailView: View {
                     }
 
                     Button {
-                        showAddToAgents = true
+                        showManageAgents = true
                     } label: {
-                        Image(systemName: "person.badge.plus")
+                        Image(systemName: "person.2")
                     }
-                    .help("Add to Agents…")
+                    .help("Manage Agents…")
 
                     Menu {
                         Button {
@@ -67,9 +67,9 @@ struct SkillDetailView: View {
                         }
 
                         Button {
-                            showAddToAgents = true
+                            showManageAgents = true
                         } label: {
-                            Label("Add to Agents…", systemImage: "person.badge.plus")
+                            Label("Manage Agents…", systemImage: "person.2")
                         }
 
                         Divider()
@@ -96,15 +96,15 @@ struct SkillDetailView: View {
                 }
             }
         } message: {
-            Text("This will uninstall the skill from all agents. You can reinstall it later from \(skill.source ?? "its source").")
+            Text(removeConfirmationMessage)
         }
         .alert("Remove Failed", isPresented: Binding(get: { removeError != nil }, set: { _ in removeError = nil })) {
             Button("OK") { removeError = nil }
         } message: {
             Text(removeError ?? "")
         }
-        .sheet(isPresented: $showAddToAgents) {
-            AddToAgentsSheet(skill: skill)
+        .sheet(isPresented: $showManageAgents) {
+            ManageAgentsSheet(skill: skill)
         }
         .navigationTitle(skill.displayName)
     }
@@ -211,34 +211,64 @@ struct SkillDetailView: View {
             endPoint: .bottomTrailing
         )
     }
+
+    private var removeConfirmationMessage: String {
+        switch skill.scope {
+        case .global:
+            "This will uninstall the skill from all global agents. You can reinstall it later from \(skill.source ?? "its source")."
+        case .project:
+            "This will uninstall the skill from the current project. You can reinstall it later from \(skill.source ?? "its source")."
+        }
+    }
 }
 
-// MARK: - Add to Agents Sheet
+// MARK: - Manage Agents Sheet
 
-struct AddToAgentsSheet: View {
+struct ManageAgentsSheet: View {
     @Environment(SkillsManager.self) private var manager
     @Environment(\.dismiss) private var dismiss
     let skill: Skill
     @State private var selectedAgents: Set<String> = []
-    @State private var isInstalling = false
+    @State private var isApplying = false
+    @State private var errorMessage: String?
 
     private var installedAgentIDs: Set<String> {
         Set(skill.agents)
+    }
+
+    private var agentsToAdd: Set<String> {
+        selectedAgents.subtracting(installedAgentIDs)
+    }
+
+    private var agentsToRemove: Set<String> {
+        installedAgentIDs.subtracting(selectedAgents)
+    }
+
+    private var hasChanges: Bool {
+        !agentsToAdd.isEmpty || !agentsToRemove.isEmpty
+    }
+
+    private var canApply: Bool {
+        hasChanges && !isApplying && (agentsToAdd.isEmpty || installSource != nil)
+    }
+
+    private var installSource: String? {
+        skill.source ?? skill.sourceUrl
     }
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             VStack(spacing: 8) {
-                Image(systemName: "person.badge.plus")
+                Image(systemName: "person.2")
                     .font(.system(size: 36))
                     .foregroundStyle(.tint)
 
-                Text("Add to Agents")
+                Text("Manage Agents")
                     .font(.title2)
                     .fontWeight(.bold)
 
-                Text("Install **\(skill.displayName)** to additional agents")
+                Text("Choose where **\(skill.displayName)** is available")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -248,23 +278,34 @@ struct AddToAgentsSheet: View {
             Divider()
 
             // Agent list
-            List(SkillsManager.allAgents, id: \.id, selection: $selectedAgents) { agent in
+            List(SkillsManager.allAgents, id: \.id) { agent in
                 let isInstalled = installedAgentIDs.contains(agent.id)
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(agent.name)
-                            .font(.body)
-                        Text("~/\(agent.pathSuffix)")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
+                Toggle(isOn: Binding(
+                    get: { selectedAgents.contains(agent.id) },
+                    set: { isSelected in
+                        if isSelected {
+                            selectedAgents.insert(agent.id)
+                        } else {
+                            selectedAgents.remove(agent.id)
+                        }
                     }
-                    Spacer()
-                    if isInstalled {
-                        Text("Installed")
-                            .font(.caption)
-                            .foregroundStyle(.green)
+                )) {
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text(agent.name)
+                                .font(.body)
+                            Text("~/\(agent.pathSuffix)")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        AgentChangeLabel(
+                            isInstalled: isInstalled,
+                            isSelected: selectedAgents.contains(agent.id)
+                        )
                     }
                 }
+                .toggleStyle(.checkbox)
                 .tag(agent.id)
                 .listRowSeparator(.visible)
             }
@@ -279,32 +320,90 @@ struct AddToAgentsSheet: View {
 
                 Spacer()
 
-                Text("\(selectedAgents.count) selected")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(changeSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    if !agentsToAdd.isEmpty && installSource == nil {
+                        Text("Missing source metadata")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+                }
 
                 Button {
-                    isInstalling = true
-                    Task {
-                        await manager.installToAgents(skill, agentIDs: Array(selectedAgents))
-                        isInstalling = false
-                        dismiss()
-                    }
+                    applyChanges()
                 } label: {
-                    if isInstalling {
+                    if isApplying {
                         ProgressView()
                             .controlSize(.small)
                             .padding(.horizontal, 8)
                     } else {
-                        Text("Install")
+                        Text("Apply")
                     }
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(selectedAgents.isEmpty || isInstalling)
+                .disabled(!canApply)
             }
             .padding(16)
         }
-        .frame(width: 420, height: 480)
+        .frame(width: 460, height: 520)
+        .onAppear {
+            selectedAgents = installedAgentIDs
+        }
+        .alert("Agent Update Failed", isPresented: Binding(get: { errorMessage != nil }, set: { _ in errorMessage = nil })) {
+            Button("OK") { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
+        }
+    }
+
+    private var changeSummary: String {
+        if !hasChanges { return "\(selectedAgents.count) selected" }
+        var parts: [String] = []
+        if !agentsToAdd.isEmpty {
+            parts.append("+\(agentsToAdd.count)")
+        }
+        if !agentsToRemove.isEmpty {
+            parts.append("-\(agentsToRemove.count)")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private func applyChanges() {
+        isApplying = true
+        errorMessage = nil
+        Task {
+            do {
+                try await manager.updateAgents(for: skill, selectedAgentIDs: Array(selectedAgents))
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isApplying = false
+        }
+    }
+}
+
+private struct AgentChangeLabel: View {
+    let isInstalled: Bool
+    let isSelected: Bool
+
+    var body: some View {
+        if isInstalled && isSelected {
+            Text("Current")
+                .font(.caption)
+                .foregroundStyle(.green)
+        } else if !isInstalled && isSelected {
+            Text("Will install")
+                .font(.caption)
+                .foregroundStyle(.blue)
+        } else if isInstalled && !isSelected {
+            Text("Will remove")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        }
     }
 }
 
